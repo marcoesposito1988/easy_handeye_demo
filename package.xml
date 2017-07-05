@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package format="2">
+    <name>easy_handeye_demo</name>
+    <version>0.2.0</version>
+    <description>
+        Small demonstration of a hand-eye calibration with easy_handeye, no hardware required.
+    </description>
+
+    <maintainer email="marco.esposito@tum.de">Marco Esposito</maintainer>
+
+    <license>GPLv3</license>
+
+    <author email="marco.esposito@tum.de">Marco Esposito</author>
+
+    <buildtool_depend>catkin</buildtool_depend>
+
+    <exec_depend>easy_handeye</exec_depend>
+    <exec_depend>tf</exec_depend>
+    <exec_depend>ur5_moveit_config</exec_depend>
+
+    <export>
+    </export>
+</package>

@@ -1,0 +1,42 @@
+<launch>
+    <arg name="namespace_prefix" default="ur5_demo_handeyecalibration" />
+    <arg name="eye_on_hand" default="false" />
+
+    <arg name="robot_base_frame" value="base_link" />
+    <arg name="robot_effector_frame" value="wrist_3_link" />
+    <arg name="tracking_base_frame" value="tracking_origin" />
+    <arg name="tracking_marker_frame" value="tracking_marker" />
+
+    <!-- start the simulated tracking -->
+    <node name="tracking_simulator" pkg="easy_handeye_demo" type="tracking_simulator.py" output="screen">
+        <param unless="$(arg eye_on_hand)" name="calibration_transformation" value="0.12 0.21 0.137 0 0 0 1 $(arg robot_base_frame) $(arg tracking_base_frame)" />
+        <param unless="$(arg eye_on_hand)" name="auxiliary_transformation" value="0 0 0.01 0 0 0 1 $(arg robot_effector_frame) $(arg tracking_marker_frame)" />
+        <param if="$(arg eye_on_hand)" name="calibration_transformation" value="0 0 0.01 0 0 0 1 $(arg robot_effector_frame) $(arg tracking_base_frame)" />
+        <param if="$(arg eye_on_hand)" name="auxiliary_transformation" value="0.12 0.21 0.137 0 0 0 1 $(arg robot_base_frame) $(arg tracking_marker_frame)" />
+
+        <param name="frequency" value="10" />
+        <param name="translation_noise_stdev" value="0.0001" />
+        <param name="rotation_noise_stdev" value="0.00001" />
+    </node>
+
+    <!-- start the robot -->
+    <include file="$(find ur5_moveit_config)/launch/demo.launch">
+        <arg name="limited" value="true" />
+    </include>
+
+    <!-- start easy_handeye -->
+    <include file="$(find easy_handeye)/launch/calibrate.launch" >
+        <arg name="namespace_prefix" value="$(arg namespace_prefix)" />
+        <arg name="eye_on_hand" value="false" />
+        <arg name="publish_dummy" value="false" /> <!-- in our case it is done by the tracking simulator -->
+
+        <arg name="tracking_base_frame" value="camera_origin" />
+        <arg name="tracking_marker_frame" value="camera_marker" />
+        <arg name="robot_base_frame" value="base_link" />
+        <arg name="robot_effector_frame" value="wrist_3_link" />
+
+        <arg name="freehand_robot_movement" value="false" />
+        <arg name="robot_velocity_scaling" value="0.5" />
+        <arg name="robot_acceleration_scaling" value="0.2" />
+    </include>
+</launch>
