@@ -24,6 +24,10 @@ from geometry_msgs.msg import Vector3, Quaternion, Transform, TransformStamped
 
 rospy.init_node('tracking_simulator')
 
+should_run = rospy.get_param('~start_simulator')
+if not should_run:
+    raise ValueError
+
 is_eye_on_hand = rospy.get_param('~eye_on_hand')
 robot_base_frame = rospy.get_param('~robot_base_frame')
 robot_effector_frame = rospy.get_param('~robot_effector_frame')
@@ -55,9 +59,9 @@ else:
 
 if is_eye_on_hand:
     calibration_frame_robot = robot_effector_frame
-    calibration_frame_tracking = tracking_marker_frame
+    calibration_frame_tracking = tracking_base_frame
     arbitrary_frame_robot = robot_base_frame
-    arbitrary_frame_tracking = tracking_base_frame
+    arbitrary_frame_tracking = tracking_marker_frame
 else:
     calibration_frame_robot = robot_base_frame
     calibration_frame_tracking = tracking_base_frame
@@ -85,14 +89,14 @@ tracking_transform_msg_stmpd = TransformStamped(header=Header(frame_id=tracking_
                                                              rotation=Quaternion()))
 
 
-arbitrary_transform_msg_stmpd = TransformStamped(header=Header(frame_id=arbitrary_frame_robot), child_frame_id=tracking_marker_frame,
+arbitrary_transform_msg_stmpd = TransformStamped(header=Header(frame_id=arbitrary_frame_robot, stamp=rospy.Time.now()), child_frame_id=arbitrary_frame_tracking,
                                                  transform=Transform(translation=Vector3(*arbitrary_transformation[0]),
                                                              rotation=Quaternion(*arbitrary_transformation[1])))
 
 
 # dummy calibration so that we can just measure the tracking transformation from tf;
 # we just put this into the buffer without broadcasting
-dummy_calibration_transform_msg_stmpd = TransformStamped(header=Header(frame_id=arbitrary_frame_robot), child_frame_id=tracking_base_frame + '_dummy',
+dummy_calibration_transform_msg_stmpd = TransformStamped(header=Header(frame_id=calibration_frame_robot), child_frame_id=calibration_frame_tracking + '_dummy',
                                                          transform=Transform(translation=Vector3(*calibration_transformation[0]),
                                                              rotation=Quaternion(*calibration_transformation[1])))
 
@@ -100,8 +104,10 @@ dummy_calibration_transform_msg_stmpd = TransformStamped(header=Header(frame_id=
 tfBuffer = tf2_ros.Buffer()
 tfListener = tf2_ros.TransformListener(tfBuffer)
 tfBroadcaster = tf2_ros.TransformBroadcaster()
+tfStaticBroadcaster = tf2_ros.StaticTransformBroadcaster()
 
 
+tfStaticBroadcaster.sendTransform(arbitrary_transform_msg_stmpd)
 tfBuffer.set_transform_static(arbitrary_transform_msg_stmpd, 'default_authority')
 tfBuffer.set_transform_static(dummy_calibration_transform_msg_stmpd, 'default_authority')
 
@@ -114,8 +120,13 @@ tfBuffer.set_transform_static(dummy_calibration_transform_msg_stmpd, 'default_au
 
 while not rospy.is_shutdown():
     # publish arbitrary transform
-    arbitrary_transform_msg_stmpd.header.stamp = rospy.Time.now() - rospy.Duration(0.1)
-    tfBroadcaster.sendTransform(arbitrary_transform_msg_stmpd)
+    # TODO if it is static, we can remove it
+    # arbitrary_transform_msg_stmpd.header.stamp = rospy.Time.now() - rospy.Duration(0.1)
+    # tfBroadcaster.sendTransform(arbitrary_transform_msg_stmpd)
+
+    if not tfBuffer.can_transform(tracking_marker_frame, tracking_base_frame+'_dummy', rospy.Time(0)):
+        rate.sleep()
+        continue
 
     # measure tracking transform
     measured_tracking_transformation_msg_stmpd = tfBuffer.lookup_transform(tracking_marker_frame, tracking_base_frame+'_dummy', rospy.Time(0))
