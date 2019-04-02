@@ -1,3 +1,5 @@
+cmake-build-debug
+
 build/
 bin/
 lib/
