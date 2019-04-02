@@ -1,7 +1,20 @@
 <launch>
     <arg name="namespace_prefix" default="demo_handeyecalibration" />
-    <arg name="eye_on_hand" default="false" />
     <arg name="start_simulator" default="true" />
+
+    <!-- tracking simulation frequency and noise parameters -->
+    <param name="frequency" value="10" />
+    <param name="translation_noise_stdev" value="0.001" />
+    <param name="rotation_noise_stdev" value="0.0001" />
+
+    <arg name="eye_on_hand" default="false" />
+
+    <!-- transformations for the eye-on-base case -->
+    <arg unless="$(arg eye_on_hand)" name="calibration_transformation" default="1 0 0.5 0 0 0 1" />
+    <arg unless="$(arg eye_on_hand)" name="arbitrary_transformation" default="0.12 0.21 0.137 0 0 0 1" />
+    <!-- transformations for the eye-on-hand case -->
+    <arg if="$(arg eye_on_hand)" name="calibration_transformation" default="0.12 0.21 0.137 0 0 0 1" />
+    <arg if="$(arg eye_on_hand)" name="arbitrary_transformation" default="1 0 0.5 0 0 0 1" />
 
     <arg name="robot_base_frame" value="iiwa_link_0" />
     <arg name="robot_effector_frame" value="iiwa_link_ee" />
@@ -38,12 +51,12 @@
 
     <!-- start the simulated tracking -->
     <node name="tracking_simulator" pkg="easy_handeye_demo" type="tracking_simulator.py" output="screen">
-        <param unless="$(arg eye_on_hand)" name="calibration_transformation" value="0.12 0.21 0.137 0 0 0 1" />
-        <param unless="$(arg eye_on_hand)" name="auxiliary_transformation" value="0 0 0.01 0 0 0 1" />
-        <param if="$(arg eye_on_hand)" name="calibration_transformation" value="0 0 0.01 0 0 0 1" />
-        <param if="$(arg eye_on_hand)" name="auxiliary_transformation" value="0.12 0.21 0.137 0 0 0 1" />
-        <param name="eye_on_hand" value="$(arg eye_on_hand)" />
         <param name="start_simulator" value="$(arg start_simulator)" />
+
+        <param name="eye_on_hand" value="$(arg eye_on_hand)" />
+
+        <param name="calibration_transformation" value="$(arg calibration_transformation)" />
+        <param name="arbitrary_transformation" value="$(arg arbitrary_transformation)" />
 
         <param name="tracking_base_frame" value="$(arg tracking_base_frame)" />
         <param name="tracking_marker_frame" value="$(arg tracking_marker_frame)" />

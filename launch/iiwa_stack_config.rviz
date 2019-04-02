@@ -243,6 +243,10 @@ Visualization Manager:
           Value: true
         iiwa_link_ee:
           Value: false
+        tracking_marker:
+          Value: true
+        tracking_origin:
+          Value: true
         world:
           Value: false
       Marker Scale: 1
@@ -261,7 +265,9 @@ Visualization Manager:
                       iiwa_link_6:
                         iiwa_link_7:
                           iiwa_link_ee:
-                            {}
+                            tracking_marker:
+                              tracking_origin:
+                                {}
       Update Interval: 0
       Value: true
   Enabled: true
@@ -280,7 +286,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 3.3469901084899902
+      Distance: 4.4372239112854
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -295,10 +301,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.17479772865772247
+      Pitch: 0.2147977203130722
       Target Frame: world
       Value: XYOrbit (rviz)
-      Yaw: 3.5736663341522217
+      Yaw: 0.5205214619636536
     Saved: ~
 Window Geometry:
   "&Displays":

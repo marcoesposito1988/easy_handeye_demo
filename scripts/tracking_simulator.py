@@ -42,6 +42,7 @@ def parse_transformation(t_str):
 if rospy.has_param('~calibration_transformation'):
     calibration_transformation = parse_transformation(rospy.get_param('~calibration_transformation'))
 else:
+    rospy.logwarn('using default calibration transformation')
     if is_eye_on_hand:
         calibration_transformation = parse_transformation('0 0 0.05 0 0 0 1')
     else:
@@ -50,6 +51,7 @@ else:
 if rospy.has_param('~arbitrary_transformation'):
     arbitrary_transformation = parse_transformation(rospy.get_param('~arbitrary_transformation'))
 else:
+    rospy.logwarn('using default arbitrary transformation')
     if is_eye_on_hand:
         arbitrary_transformation = parse_transformation('2 0 1 0 0 0 1')
     else:
