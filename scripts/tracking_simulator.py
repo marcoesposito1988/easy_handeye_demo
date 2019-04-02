@@ -17,7 +17,6 @@ from __future__ import division
 
 import rospy
 import tf2_ros
-import transforms3d as tfs
 import numpy as np
 from std_msgs.msg import Header
 from geometry_msgs.msg import Vector3, Quaternion, Transform, TransformStamped
@@ -119,13 +118,10 @@ tfBuffer.set_transform_static(dummy_calibration_transform_msg_stmpd, 'default_au
 # - optionally publish the calibration transform with dummy frame for debugging
 
 while not rospy.is_shutdown():
-    # publish arbitrary transform
-    # TODO if it is static, we can remove it
-    # arbitrary_transform_msg_stmpd.header.stamp = rospy.Time.now() - rospy.Duration(0.1)
-    # tfBroadcaster.sendTransform(arbitrary_transform_msg_stmpd)
 
     if not tfBuffer.can_transform(tracking_marker_frame, tracking_base_frame+'_dummy', rospy.Time(0)):
-        rate.sleep()
+        rospy.loginfo('Waiting for tf tree to be connected...')
+        rospy.sleep(1)
         continue
 
     # measure tracking transform
