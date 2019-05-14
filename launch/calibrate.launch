@@ -32,7 +32,7 @@
         <arg name="start_rviz" value="false" />
 
         <arg name="namespace_prefix" value="$(arg namespace_prefix)" />
-        <arg name="eye_on_hand" value="false" />
+        <arg name="eye_on_hand" value="$(arg eye_on_hand)" />
         <arg name="publish_dummy" value="false" /> <!-- in our case it is done by the tracking simulator -->
 
         <arg name="tracking_base_frame" value="$(arg tracking_base_frame)" />
