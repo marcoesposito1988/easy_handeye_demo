@@ -1,12 +1,18 @@
 #!/usr/bin/env python2
 
-# this script emulates the tf output of a tracking system in a hand-eye calibration setup
+# this script emulates the tf output of a tracking system in a hand-eye calibration setup, given the ground-truth
+# calibration and arbitrary transforms. the output is consists of the transform between the camera and the marker,
+# plus noise
+#
+# if we are not calibrating but publishing the calibration, but demoing the result, we compute the result according to
+# the specified ground truth frame but publish it with respect to the actual result of the calibration (so that the
+# outcome of a faulty calibration is faithfully reproduced)
+#
 # it is assumed that a MoveIt! instance is running, so that the tf frames for a (simulated) robot are present
-# the tracking output is computed from the given "calibration" and "arbitrary" transforms
+#
 # the calibration transform is the one which is the unknown for the calibration process; the arbitrary transformation
 # is the collateral transformation which is ignored during the calibration process, but it is necessary to compute the
 # tracking output here
-# both calibration and arbitrary transforms can be passed as parameters, otherwise (hopefully sane) defaults are used
 
 # TODO: output tracking information only when marker within field of view of tracking system to make it more realistic
 # (in prism for optical tracking, within radius for EM, ...)
@@ -23,58 +29,29 @@ from geometry_msgs.msg import Vector3, Quaternion, Transform, TransformStamped
 
 rospy.init_node('tracking_simulator')
 
-should_run = rospy.get_param('~start_simulator')
-if not should_run:
-    raise ValueError
+tfBuffer = tf2_ros.Buffer()
+tfListener = tf2_ros.TransformListener(tfBuffer)
+tfBroadcaster = tf2_ros.TransformBroadcaster()
+tfStaticBroadcaster = tf2_ros.StaticTransformBroadcaster()
 
+is_calibration = rospy.get_param('~is_calibration')
 is_eye_on_hand = rospy.get_param('~eye_on_hand')
+
 robot_base_frame = rospy.get_param('~robot_base_frame')
 robot_effector_frame = rospy.get_param('~robot_effector_frame')
 tracking_base_frame = rospy.get_param('~tracking_base_frame')
 tracking_marker_frame = rospy.get_param('~tracking_marker_frame')
-
-
-def parse_transformation(t_str):
-    tx, ty, tz, rx, ry, rz, rw = [float(t) for t in t_str.split(' ')[0:7]]
-    return np.array([tx, ty, tz]), np.array([rx, ry, rz, rw])
-
-
-if rospy.has_param('~calibration_transformation'):
-    calibration_transformation = parse_transformation(rospy.get_param('~calibration_transformation'))
-else:
-    rospy.logwarn('using default calibration transformation')
-    if is_eye_on_hand:
-        calibration_transformation = parse_transformation('0 0 0.05 0 0 0 1')
-    else:
-        calibration_transformation = parse_transformation('2 0 1 0 0 0 1')
-
-if rospy.has_param('~arbitrary_transformation'):
-    arbitrary_transformation = parse_transformation(rospy.get_param('~arbitrary_transformation'))
-else:
-    rospy.logwarn('using default arbitrary transformation')
-    if is_eye_on_hand:
-        arbitrary_transformation = parse_transformation('2 0 1 0 0 0 1')
-    else:
-        arbitrary_transformation = parse_transformation('0 0 0.05 0 0 0 1')
-
-
-if is_eye_on_hand:
-    calibration_frame_robot = robot_effector_frame
-    calibration_frame_tracking = tracking_base_frame
-    arbitrary_frame_robot = robot_base_frame
-    arbitrary_frame_tracking = tracking_marker_frame
-else:
-    calibration_frame_robot = robot_base_frame
-    calibration_frame_tracking = tracking_base_frame
-    arbitrary_frame_robot = robot_effector_frame
-    arbitrary_frame_tracking = tracking_marker_frame
-
+CAMERA_DUMMY_FRAME = tracking_base_frame+'_gt'
+MARKER_DUMMY_FRAME = tracking_marker_frame+'_gt'
 
 frequency = rospy.get_param('~frequency')
 transl_noise = rospy.get_param('~translation_noise_stdev')
 rot_noise = rospy.get_param('~rotation_noise_stdev')
 
-rate = rospy.Rate(frequency)
+
+def parse_transformation(t_str):
+    tx, ty, tz, rx, ry, rz, rw = [float(t) for t in t_str.split(' ')[0:7]]
+    return np.array([tx, ty, tz]), np.array([rx, ry, rz, rw])
 
 
 def fuzzy_transformation(translation, quaternion):
@@ -84,50 +61,58 @@ def fuzzy_transformation(translation, quaternion):
     return noisy_translation, noisy_quaternion
 
 
-# we publish the tracking transform reversed for keeping the tf chain direction
-tracking_transform_msg_stmpd = TransformStamped(header=Header(frame_id=tracking_marker_frame), child_frame_id=tracking_base_frame,
-                                                   transform=Transform(translation=Vector3(),
-                                                             rotation=Quaternion()))
+ground_truth_calibration_transformation = parse_transformation(rospy.get_param('~ground_truth_calibration_transformation'))
+arbitrary_marker_placement_transformation = parse_transformation(rospy.get_param('~arbitrary_marker_placement_transformation'))
+
+if is_eye_on_hand:
+    calibration_origin_frame = robot_effector_frame
+    marker_placement_origin_frame = robot_base_frame
+else:
+    calibration_origin_frame = robot_base_frame
+    marker_placement_origin_frame = robot_effector_frame
 
 
-arbitrary_transform_msg_stmpd = TransformStamped(header=Header(frame_id=arbitrary_frame_robot, stamp=rospy.Time.now()), child_frame_id=arbitrary_frame_tracking,
-                                                 transform=Transform(translation=Vector3(*arbitrary_transformation[0]),
-                                                             rotation=Quaternion(*arbitrary_transformation[1])))
-
-
-# dummy calibration so that we can just measure the tracking transformation from tf;
-# we just put this into the buffer without broadcasting
-dummy_calibration_transform_msg_stmpd = TransformStamped(header=Header(frame_id=calibration_frame_robot), child_frame_id=calibration_frame_tracking + '_dummy',
-                                                         transform=Transform(translation=Vector3(*calibration_transformation[0]),
-                                                             rotation=Quaternion(*calibration_transformation[1])))
-
-
-tfBuffer = tf2_ros.Buffer()
-tfListener = tf2_ros.TransformListener(tfBuffer)
-tfBroadcaster = tf2_ros.TransformBroadcaster()
-tfStaticBroadcaster = tf2_ros.StaticTransformBroadcaster()
-
-
-tfStaticBroadcaster.sendTransform(arbitrary_transform_msg_stmpd)
+# set the marker placement in the buffer, so that we can measure the tracking output
+# but the transform doesn't show up in tf (more realistic to the viewer, and no loops in the DAG)
+arbitrary_transform_msg_stmpd = TransformStamped(header=Header(frame_id=marker_placement_origin_frame, stamp=rospy.Time.now()), child_frame_id=MARKER_DUMMY_FRAME,
+                                                 transform=Transform(translation=Vector3(*arbitrary_marker_placement_transformation[0]),
+                                                                     rotation=Quaternion(*arbitrary_marker_placement_transformation[1])))
 tfBuffer.set_transform_static(arbitrary_transform_msg_stmpd, 'default_authority')
-tfBuffer.set_transform_static(dummy_calibration_transform_msg_stmpd, 'default_authority')
+
+if is_calibration:
+    # publish a dummy calibration for visualization purposes
+    calib_gt_msg_stmpd = TransformStamped(header=Header(frame_id=calibration_origin_frame), child_frame_id=tracking_base_frame,
+                                          transform=Transform(translation=Vector3(*ground_truth_calibration_transformation[0]),
+                                                              rotation=Quaternion(*ground_truth_calibration_transformation[1])))
+    tfStaticBroadcaster.sendTransform(calib_gt_msg_stmpd)
+
+# set the ground truth calibration; during demo this allows us to compute the correct tracking output even if the calibration failed
+calib_gt_msg_stmpd = TransformStamped(header=Header(frame_id=calibration_origin_frame), child_frame_id=CAMERA_DUMMY_FRAME,
+                                                transform=Transform(translation=Vector3(*ground_truth_calibration_transformation[0]),
+                                                                    rotation=Quaternion(*ground_truth_calibration_transformation[1])))
+tfBuffer.set_transform_static(calib_gt_msg_stmpd, 'default_authority')
+
 
 # in the loop:
 # - compute the tracking transform by closing the loop
-# (if eye on base: marker -> hand -> robot base -> tracking base; that is arbitrary -> robot hand to base -> calibration)
-# (if eye on hand: tracking base -> hand -> robot base -> tracking marker; that is calibraton -> robot hand to base -> arbitrary)
+# - add noise
 # - publish the tracking transform
-# - optionally publish the calibration transform with dummy frame for debugging
+
+tracking_transform_msg_stmpd = TransformStamped(header=Header(frame_id=tracking_base_frame), child_frame_id=tracking_marker_frame,
+                                                transform=Transform(translation=Vector3(),
+                                                                    rotation=Quaternion()))
+
+rate = rospy.Rate(frequency)
 
 while not rospy.is_shutdown():
 
-    if not tfBuffer.can_transform(tracking_marker_frame, tracking_base_frame+'_dummy', rospy.Time(0)):
+    if not tfBuffer.can_transform(CAMERA_DUMMY_FRAME, MARKER_DUMMY_FRAME, rospy.Time(0)):
         rospy.loginfo('Waiting for tf tree to be connected...')
         rospy.sleep(1)
         continue
 
     # measure tracking transform
-    measured_tracking_transformation_msg_stmpd = tfBuffer.lookup_transform(tracking_marker_frame, tracking_base_frame+'_dummy', rospy.Time(0))
+    measured_tracking_transformation_msg_stmpd = tfBuffer.lookup_transform(CAMERA_DUMMY_FRAME, MARKER_DUMMY_FRAME, rospy.Time(0))
 
     # add noise
     t = measured_tracking_transformation_msg_stmpd.transform.translation
@@ -140,6 +125,7 @@ while not rospy.is_shutdown():
     tracking_transform_msg_stmpd.header.stamp = rospy.Time.now() - rospy.Duration(0.1)
     tracking_transform_msg_stmpd.transform.translation = Vector3(*fuzzy_translation)
     tracking_transform_msg_stmpd.transform.rotation = Quaternion(*fuzzy_quaternion)
+
     tfBroadcaster.sendTransform(tracking_transform_msg_stmpd)
 
     rate.sleep()
