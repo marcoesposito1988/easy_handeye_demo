@@ -5,7 +5,7 @@ find_package(catkin REQUIRED)
 
 catkin_package()
 
-install(PROGRAMS
+catkin_install_python(PROGRAMS
     scripts/tracking_simulator.py
     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
