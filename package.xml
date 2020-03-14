@@ -6,11 +6,11 @@
         Small demonstration of a hand-eye calibration with easy_handeye, no hardware required.
     </description>
 
-    <maintainer email="marco.esposito@tum.de">Marco Esposito</maintainer>
+    <maintainer email="esposito@imfusion.com">Marco Esposito</maintainer>
 
     <license>GPLv3</license>
 
-    <author email="marco.esposito@tum.de">Marco Esposito</author>
+    <author email="esposito@imfusion.com">Marco Esposito</author>
 
     <buildtool_depend>catkin</buildtool_depend>
 
