@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.0.2)
 project(easy_handeye_demo)
 
 find_package(catkin REQUIRED)
@@ -6,11 +6,13 @@ find_package(catkin REQUIRED)
 catkin_package()
 
 install(PROGRAMS
-    scripts/noisy_tf_publisher.py
+    scripts/tracking_simulator.py
     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
 install(FILES
-    launch/demo.launch
+    launch/calibrate.launch
+    launch/check_calibration.launch
+    launch/iiwa_stack_config.rviz
     DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )

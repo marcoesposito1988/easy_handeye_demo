@@ -16,7 +16,7 @@
 
     <exec_depend>easy_handeye</exec_depend>
     <exec_depend>tf</exec_depend>
-    <exec_depend>iiwa_stack</exec_depend>
+    <exec_depend>iiwa_moveit</exec_depend>
 
     <export>
     </export>
