@@ -3,9 +3,12 @@
     if you have to recalibrate, you can rerun your calibrate.launch and just restart the system -->
 
     <arg name="start_simulator" default="true" doc="Start a simulated tracking system with a trivial noise model" />
+    <arg name="evaluation" default="true" doc="Start the evaluator to estimate the accuracy of the calibration" />
 
     <arg name="namespace_prefix" default="demo_handeyecalibration" />
     <arg name="eye_on_hand" default="false" />
+    <arg if="$(arg eye_on_hand)" name="namespace" value="$(arg namespace_prefix)_eye_on_hand" />
+    <arg unless="$(arg eye_on_hand)" name="namespace" value="$(arg namespace_prefix)_eye_on_base" />
 
     <arg name="robot_base_frame" value="iiwa_link_0" />
     <arg name="robot_effector_frame" value="iiwa_link_ee" />
@@ -54,6 +57,15 @@
         <arg name="tracking_base_frame" value="$(arg tracking_base_frame)" />
         <arg name="robot_base_frame" value="$(arg robot_base_frame)" />
     </include>
+
+    <!-- evaluate the accuracy of the hand-eye calibration  -->
+    <node if="$(arg evaluation)" ns="$(arg namespace)" name="calibration_evaluator" pkg="rqt_easy_handeye" type="rqt_calibration_evaluator" respawn="false" output="screen" >
+        <param name="eye_on_hand" value="$(arg eye_on_hand)" />
+        <param name="robot_base_frame" value="$(arg robot_base_frame)" />
+        <param name="robot_effector_frame" value="$(arg robot_effector_frame)" />
+        <param name="tracking_base_frame" value="$(arg tracking_base_frame)" />
+        <param name="tracking_marker_frame" value="$(arg tracking_marker_frame)" />
+    </node>
 
     <!-- start rviz with custom configuration -->
     <node ns="/iiwa" name="$(anon rviz)" pkg="rviz" type="rviz" respawn="true"
