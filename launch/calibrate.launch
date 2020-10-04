@@ -69,6 +69,6 @@
     </include>
 
     <!-- start rviz with custom configuration -->
-    <node ns="/iiwa" name="$(anon rviz)" pkg="rviz" type="rviz" respawn="true"
-          args="-d $(find easy_handeye_demo)/launch/iiwa_stack_config.rviz" output="screen" />
+    <node ns="/iiwa" name="$(anon rviz)" pkg="rviz" type="rviz" respawn="false"
+          args="-d $(find easy_handeye_demo)/launch/iiwa_stack_config_rvizpanel.rviz" output="screen" />
 </launch>
