@@ -7,6 +7,8 @@
     <arg name="namespace_prefix" default="demo_handeyecalibration" />
     <arg name="eye_on_hand" default="false" />
 
+    <arg name="move_group_namespace" value="/iiwa" />
+    <arg name="move_group" value="manipulator" />
     <arg name="robot_base_frame" value="iiwa_link_0" />
     <arg name="robot_effector_frame" value="iiwa_link_ee" />
     <arg name="tracking_base_frame" value="tracking_origin" />
@@ -47,13 +49,15 @@
     </node>
 
     <!-- start easy_handeye calibration procedure -->
-    <include ns="/iiwa" file="$(find easy_handeye)/launch/calibrate.launch" >
+    <include file="$(find easy_handeye)/launch/calibrate.launch" >
         <arg name="start_rviz" value="false" />
-
-        <arg name="namespace_prefix" value="$(arg namespace_prefix)" />
-        <arg name="eye_on_hand" value="$(arg eye_on_hand)" />
         <arg name="publish_dummy" value="false" /> <!-- in our case it is done by the tracking simulator -->
 
+        <arg name="namespace_prefix" value="$(arg namespace_prefix)" />
+        <arg name="move_group_namespace" value="$(arg move_group_namespace)" />
+        <arg name="move_group" value="$(arg move_group)" />
+
+        <arg name="eye_on_hand" value="$(arg eye_on_hand)" />
         <arg name="tracking_base_frame" value="$(arg tracking_base_frame)" />
         <arg name="tracking_marker_frame" value="$(arg tracking_marker_frame)" />
         <arg name="robot_base_frame" value="$(arg robot_base_frame)" />
