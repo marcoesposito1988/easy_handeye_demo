@@ -1,0 +1,73 @@
+<launch>
+    <!-- you can write your own calibrate.launch, by including the ROS drivers for robot and tracking and choosing
+    your own namespace if you have multiple tracking devices or robots -->
+
+    <arg name="start_simulator" default="true" doc="Start a simulated tracking system with a trivial noise model" />
+
+    <arg name="namespace_prefix" default="demo_handeyecalibration" />
+    <arg name="eye_on_hand" default="false" />
+
+    <!-- these parameters depend on the robot; you can copy these for the Franka Panda -->
+    <arg name="move_group" value="panda_arm" />
+    <arg name="move_group_namespace" value="/" />
+    <arg name="robot_base_frame" value="panda_link0" />
+    <arg name="robot_effector_frame" value="panda_link7" />
+    <!-- these parameters depend on the tracking system; these are only valid for this simulator, you'll have to find out yours -->
+    <arg name="tracking_base_frame" value="tracking_origin" />
+    <arg name="tracking_marker_frame" value="tracking_marker" />
+
+    <!-- start the robot (and an extra Rviz instance, sadly) -->
+    <include file="$(find moveit_resources_panda_moveit_config)/launch/demo.launch" />
+
+    <!-- start the simulated tracking -->
+    <node name="tracking_simulator" pkg="easy_handeye_demo" type="tracking_simulator.py" output="screen">
+        <!-- if false, it computes the tracking output with respect to the ground truth and publishes it wrt the calibration result -->
+        <param name="is_calibration" value="true" />
+
+        <!-- tracking simulation frequency and noise parameters -->
+        <param name="frequency" value="10" />
+        <param name="translation_noise_stdev" value="0.001" />
+        <param name="rotation_noise_stdev" value="0.0001" />
+
+        <param name="eye_on_hand" value="$(arg eye_on_hand)" />
+        <!-- transformations for the eye-on-base case -->
+        <param unless="$(arg eye_on_hand)" name="ground_truth_calibration_transformation" value="1 0 0.5 0 0 0 1" />
+        <param unless="$(arg eye_on_hand)" name="arbitrary_marker_placement_transformation" value="0.12 0.21 0.137 0 0 0 1" />
+        <!-- transformations for the eye-on-hand case -->
+        <param if="$(arg eye_on_hand)" name="ground_truth_calibration_transformation" value="0.12 0.21 0.137 0 0 0 1" />
+        <param if="$(arg eye_on_hand)" name="arbitrary_marker_placement_transformation" value="1 0 0.5 0 0 0 1" />
+
+        <param name="tracking_base_frame" value="$(arg tracking_base_frame)" />
+        <param name="tracking_marker_frame" value="$(arg tracking_marker_frame)" />
+        <param name="robot_base_frame" value="$(arg robot_base_frame)" />
+        <param name="robot_effector_frame" value="$(arg robot_effector_frame)" />
+
+        <!-- simulated tracking noise parameters -->
+        <param name="frequency" value="10" />
+        <param name="translation_noise_stdev" value="0.0001" />
+        <param name="rotation_noise_stdev" value="0.00001" />
+    </node>
+
+    <!-- start easy_handeye calibration procedure -->
+    <include file="$(find easy_handeye)/launch/calibrate.launch" >
+        <arg name="start_rviz" value="false" />
+        <arg name="publish_dummy" value="false" /> <!-- in our case it is done by the tracking simulator -->
+
+        <arg name="move_group" value="$(arg move_group)" />
+        <arg name="move_group_namespace" value="$(arg move_group_namespace)" />
+
+        <arg name="eye_on_hand" value="$(arg eye_on_hand)" />
+        <arg name="tracking_base_frame" value="$(arg tracking_base_frame)" />
+        <arg name="tracking_marker_frame" value="$(arg tracking_marker_frame)" />
+        <arg name="robot_base_frame" value="$(arg robot_base_frame)" />
+        <arg name="robot_effector_frame" value="$(arg robot_effector_frame)" />
+
+        <arg name="freehand_robot_movement" value="false" />
+        <arg name="robot_velocity_scaling" value="0.5" />
+        <arg name="robot_acceleration_scaling" value="0.2" />
+    </include>
+
+    <!-- start rviz with custom configuration -->
+    <node name="$(anon rviz)" pkg="rviz" type="rviz" respawn="true"
+          args="-d $(find easy_handeye_demo)/launch/franka_panda/panda_config.rviz" output="screen" />
+</launch>
