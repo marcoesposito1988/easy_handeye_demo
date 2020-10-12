@@ -1,0 +1,72 @@
+<launch>
+    <!-- you can include the easy_handeye publish.launch file into your own launch files, according to this example;
+    if you have to recalibrate, you can rerun your calibrate.launch and just restart the system -->
+
+    <arg name="start_simulator" default="true" doc="Start a simulated tracking system with a trivial noise model" />
+    <arg name="evaluation" default="true" doc="Start the evaluator to estimate the accuracy of the calibration" />
+
+    <arg name="namespace_prefix" default="demo_handeyecalibration" />
+    <arg name="eye_on_hand" default="false" />
+    <arg if="$(arg eye_on_hand)" name="namespace" value="$(arg namespace_prefix)_eye_on_hand" />
+    <arg unless="$(arg eye_on_hand)" name="namespace" value="$(arg namespace_prefix)_eye_on_base" />
+
+    <arg name="robot_base_frame" value="base_link" />
+    <arg name="robot_effector_frame" value="ee_link" />
+    <arg name="tracking_base_frame" value="tracking_origin" />
+    <arg name="tracking_marker_frame" value="tracking_marker" />
+
+    <!-- start the robot -->
+    <include file="$(find ur5_moveit_config)/launch/demo.launch" />
+
+    <!-- start the simulated tracking -->
+    <node name="tracking_simulator" pkg="easy_handeye_demo" type="tracking_simulator.py" output="screen">
+        <!-- if false, it computes the tracking output with respect to the ground truth and publishes it wrt the calibration result -->
+        <param name="is_calibration" value="false" />
+
+        <!-- tracking simulation frequency and noise parameters -->
+        <param name="frequency" value="10" />
+        <param name="translation_noise_stdev" value="0.001" />
+        <param name="rotation_noise_stdev" value="0.0001" />
+
+        <param name="eye_on_hand" value="$(arg eye_on_hand)" />
+        <!-- transformations for the eye-on-base case -->
+        <param unless="$(arg eye_on_hand)" name="ground_truth_calibration_transformation" value="1 0 0.5 0 0 0 1" />
+        <param unless="$(arg eye_on_hand)" name="arbitrary_marker_placement_transformation" value="0.12 0.21 0.137 0 0 0 1" />
+        <!-- transformations for the eye-on-hand case -->
+        <param if="$(arg eye_on_hand)" name="ground_truth_calibration_transformation" value="0.12 0.21 0.137 0 0 0 1" />
+        <param if="$(arg eye_on_hand)" name="arbitrary_marker_placement_transformation" value="1 0 0.5 0 0 0 1" />
+
+        <param name="tracking_base_frame" value="$(arg tracking_base_frame)" />
+        <param name="tracking_marker_frame" value="$(arg tracking_marker_frame)" />
+        <param name="robot_base_frame" value="$(arg robot_base_frame)" />
+        <param name="robot_effector_frame" value="$(arg robot_effector_frame)" />
+
+        <!-- simulated tracking noise parameters -->
+        <param name="frequency" value="10" />
+        <param name="translation_noise_stdev" value="0.0001" />
+        <param name="rotation_noise_stdev" value="0.00001" />
+    </node>
+
+    <!-- publish the hand-eye calibration computed with easy_handeye -->
+    <include file="$(find easy_handeye)/launch/publish.launch" >
+        <arg name="eye_on_hand" value="$(arg eye_on_hand)" />
+        <arg name="namespace_prefix" value="$(arg namespace_prefix)" />
+
+        <arg name="tracking_base_frame" value="$(arg tracking_base_frame)" />
+        <arg unless="$(arg eye_on_hand)" name="robot_base_frame" value="$(arg robot_base_frame)" />
+        <arg if="$(arg eye_on_hand)" name="robot_effector_frame" value="$(arg robot_effector_frame)" />
+    </include>
+
+    <!-- evaluate the accuracy of the hand-eye calibration  -->
+    <node if="$(arg evaluation)" ns="$(arg namespace)" name="calibration_evaluator" pkg="rqt_easy_handeye" type="rqt_calibration_evaluator" respawn="false" output="screen" >
+        <param name="eye_on_hand" value="$(arg eye_on_hand)" />
+        <param name="robot_base_frame" value="$(arg robot_base_frame)" />
+        <param name="robot_effector_frame" value="$(arg robot_effector_frame)" />
+        <param name="tracking_base_frame" value="$(arg tracking_base_frame)" />
+        <param name="tracking_marker_frame" value="$(arg tracking_marker_frame)" />
+    </node>
+
+    <!-- start rviz with custom configuration -->
+    <node name="$(anon rviz)" pkg="rviz" type="rviz" respawn="true"
+          args="-d $(find easy_handeye_demo)/launch/universal_robot/ur5_config.rviz" output="screen" />
+</launch>
