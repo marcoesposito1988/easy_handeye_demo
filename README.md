@@ -53,7 +53,11 @@ source devel/setup.bash
 ```
 - start the simulation (change the eye_on_hand parameter accordingly)
 ```
-roslaunch easy_handeye_demo eye_on_hand:=true
+# first perform the calibration
+roslaunch easy_handeye_demo calibrate.launch eye_on_hand:=true
+
+# then, check the result
+roslaunch easy_handeye_demo check_calibration.launch eye_on_hand:=true
 ```
 
 ### Performing the calibration
