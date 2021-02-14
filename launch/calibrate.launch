@@ -13,11 +13,14 @@
     <arg name="robot_effector_frame" value="iiwa_link_ee" />
     <arg name="tracking_base_frame" value="tracking_origin" />
     <arg name="tracking_marker_frame" value="tracking_marker" />
+    <arg name="freehand_robot_movement" default="false" />
 
     <!-- start the robot -->
-    <include file="$(find iiwa_moveit)/launch/demo.launch">
+    <include unless="$(arg freehand_robot_movement)" file="$(find iiwa_moveit)/launch/demo.launch">
         <arg name="rviz" value="false" />
     </include>
+    <node if="$(arg freehand_robot_movement)" name="dummy_robot" pkg="tf" type="static_transform_publisher"
+          args="1 1 1 0 1.5 0 $(arg robot_base_frame) $(arg robot_effector_frame) 10" />
 
     <!-- start the simulated tracking -->
     <node name="tracking_simulator" pkg="easy_handeye_demo" type="tracking_simulator.py" output="screen">
@@ -63,7 +66,7 @@
         <arg name="robot_base_frame" value="$(arg robot_base_frame)" />
         <arg name="robot_effector_frame" value="$(arg robot_effector_frame)" />
 
-        <arg name="freehand_robot_movement" value="false" />
+        <arg name="freehand_robot_movement" value="$(arg freehand_robot_movement)" />
         <arg name="robot_velocity_scaling" value="0.5" />
         <arg name="robot_acceleration_scaling" value="0.2" />
     </include>
