@@ -22,9 +22,6 @@
 
     <!-- start the simulated tracking -->
     <node name="tracking_simulator" pkg="easy_handeye_demo" type="tracking_simulator.py" output="screen">
-        <!-- if false, it computes the tracking output with respect to the ground truth and publishes it wrt the calibration result -->
-        <param name="is_calibration" value="false" />
-
         <!-- tracking simulation frequency and noise parameters -->
         <param name="frequency" value="10" />
         <param name="translation_noise_stdev" value="0.001" />

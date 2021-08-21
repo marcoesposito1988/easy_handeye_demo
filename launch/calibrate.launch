@@ -24,9 +24,6 @@
 
     <!-- start the simulated tracking -->
     <node name="tracking_simulator" pkg="easy_handeye_demo" type="tracking_simulator.py" output="screen">
-        <!-- if false, it computes the tracking output with respect to the ground truth and publishes it wrt the calibration result -->
-        <param name="is_calibration" value="true" />
-
         <!-- tracking simulation frequency and noise parameters -->
         <param name="frequency" value="10" />
         <param name="translation_noise_stdev" value="0.001" />
@@ -54,7 +51,6 @@
     <!-- start easy_handeye calibration procedure -->
     <include file="$(find easy_handeye)/launch/calibrate.launch" >
         <arg name="start_rviz" value="false" />
-        <arg name="publish_dummy" value="false" /> <!-- in our case it is done by the tracking simulator -->
 
         <arg name="namespace_prefix" value="$(arg namespace_prefix)" />
         <arg name="move_group_namespace" value="$(arg move_group_namespace)" />

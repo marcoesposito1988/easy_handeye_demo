@@ -34,7 +34,6 @@ tfListener = tf2_ros.TransformListener(tfBuffer)
 tfBroadcaster = tf2_ros.TransformBroadcaster()
 tfStaticBroadcaster = tf2_ros.StaticTransformBroadcaster()
 
-is_calibration = rospy.get_param('~is_calibration')
 is_eye_on_hand = rospy.get_param('~eye_on_hand')
 
 robot_base_frame = rospy.get_param('~robot_base_frame')
@@ -80,15 +79,6 @@ arbitrary_transform_msg_stmpd = TransformStamped(
     transform=Transform(translation=Vector3(*arbitrary_marker_placement_transformation[0]),
                         rotation=Quaternion(*arbitrary_marker_placement_transformation[1])))
 tfBuffer.set_transform_static(arbitrary_transform_msg_stmpd, 'default_authority')
-
-if is_calibration:
-    # publish a dummy calibration for visualization purposes
-    calib_gt_msg_stmpd = TransformStamped(header=Header(frame_id=calibration_origin_frame),
-                                          child_frame_id=tracking_base_frame,
-                                          transform=Transform(
-                                              translation=Vector3(*ground_truth_calibration_transformation[0]),
-                                              rotation=Quaternion(*ground_truth_calibration_transformation[1])))
-    tfStaticBroadcaster.sendTransform(calib_gt_msg_stmpd)
 
 # set the ground truth calibration; during demo this allows us to compute the correct tracking output even if the calibration failed
 calib_gt_msg_stmpd = TransformStamped(header=Header(frame_id=calibration_origin_frame),
